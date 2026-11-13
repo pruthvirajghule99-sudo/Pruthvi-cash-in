@@ -4,32 +4,83 @@ name: Build Pruthvi Cash APK
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+    steps:
+      # 1. Download repository source code
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 2. Configure Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: gradle/actions/setup-gradle@v4
+      # 3. Configure Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-            - uses: android-actions/setup-android@v4
+      # 4. Configure Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools'
 
-      - name: Install Android SDK
-        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      # 5. Install required Android SDK packages
+      - name: Install Android SDK Platform and Build Tools
+        run: |
+          sdkmanager --install \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-      - name: Build APK
-        run: gradle assembleDebug
+      # 6. Verify Android project files
+      - name: Verify Android project
+        run: |
+          if [ ! -f settings.gradle ] && [ ! -f settings.gradle.kts ]; then
+            echo "ERROR: Android project settings file missing."
+            exit 1
+          fi
 
-      - uses: actions/upload-artifact@v4
+          if [ ! -d app ]; then
+            echo "ERROR: app module folder missing."
+            exit 1
+          fi
+
+      # 7. Build APK
+      - name: Build Debug APK
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            ./gradlew --no-daemon assembleDebug
+          else
+            gradle --no-daemon assembleDebug
+          fi
+
+      # 8. Verify APK output
+      - name: Verify APK
+        run: |
+          if [ ! -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            echo "ERROR: APK was not generated."
+            exit 1
+          fi
+
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
+
+      # 9. Upload APK for download
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: pruthvi-cash-apk
+          name: Pruthvi-Cash-Android-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
