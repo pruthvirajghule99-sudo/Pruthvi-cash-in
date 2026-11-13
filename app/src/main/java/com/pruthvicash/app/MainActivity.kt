@@ -119,7 +119,7 @@ private fun AuthScreen(vm: CashViewModel) {
             Text(if (registering) "Create account" else if (adminMode) "Administrator sign in" else "Welcome back", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Navy)
             OutlinedTextField(email, { email = it }, label = { Text("Email address") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email))
             OutlinedTextField(password, { password = it }, label = { Text("Password") }, singleLine = true, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
-            Button(onClick = { vm.login(email, password, registering) }, enabled = !vm.busy && email.contains("@") && password.length >= 6, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+            Button(onClick = { vm.login(email, password, registering) }, enabled = !vm.busy && email.contains("@") && password.length >= 6, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(12.dp)) {
                 if (vm.busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp) else Text(if (registering) "Create account" else "Sign in")
             }
             TextButton(onClick = { registering = !registering }) { Text(if (registering) "Already registered? Sign in" else "New to Pruthvi Cash? Create account") }
@@ -139,25 +139,36 @@ private fun Dashboard(vm: CashViewModel) {
             Text(if (tab == "Profile") "My profile" else if (vm.admin) "Loan applications" else "Hello, ${vm.email.substringBefore('@')}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Navy)
             IconButton(onClick = vm::signOut) { Icon(Icons.Default.ExitToApp, "Sign out", tint = Navy) }
         }
-        if (tab == "Profile") ProfileContent(vm.email, vm.admin)
-        else if (vm.admin) AdminContent(vm)
-        else CustomerContent(vm, onApply = { showApply = true })
+        if (tab == "Profile") {
+            ProfileContent(vm.email, vm.admin)
+        } else if (vm.admin) {
+            AdminContent(vm, modifier = Modifier.weight(1f))
+        } else {
+            CustomerContent(vm, onApply = { showApply = true }, modifier = Modifier.weight(1f))
+        }
         NavigationBar(containerColor = Color.White) {
             val tabs = if (vm.admin) listOf("Applications", "Profile") else listOf("Overview", "Profile")
-            tabs.forEach { item -> NavigationBarItem(selected = tab == item, onClick = { tab = item; if (item != "Profile") vm.refreshLoans() }, icon = { Icon(if (item == "Profile") Icons.Default.AccountCircle else Icons.Default.CheckCircle, item) }, label = { Text(item) }) }
+            tabs.forEach { item ->
+                NavigationBarItem(
+                    selected = tab == item,
+                    onClick = { tab = item; if (item != "Profile") vm.refreshLoans() },
+                    icon = { Icon(if (item == "Profile") Icons.Default.AccountCircle else Icons.Default.MonetizationOn, contentDescription = item) },
+                    label = { Text(item) }
+                )
+            }
         }
     }
     if (showApply) ApplyDialog(onDismiss = { showApply = false }, onSubmit = { amount, months, purpose -> vm.apply(amount, months, purpose); showApply = false })
 }
 
 @Composable
-private fun CustomerContent(vm: CashViewModel, onApply: () -> Unit) {
-    Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
+private fun CustomerContent(vm: CashViewModel, onApply: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = Navy), shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(20.dp)) {
                 Text("Flexible loans for real life", color = Color(0xFFD4E3EA)); Spacer(Modifier.height(7.dp))
                 Text("A clearer path forward.", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(16.dp)); Button(onClick = onApply, colors = ButtonDefaults.buttonColors(containerColor = Green)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Apply for a loan") }
+                Spacer(Modifier.height(16.dp)); Button(onClick = onApply, colors = ButtonDefaults.buttonColors(containerColor = Green)) { Icon(Icons.Default.Add, null); Spacer(Modifier.width(6.dp)); Text("Apply now") }
             }
         }
         Row(Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -170,8 +181,8 @@ private fun CustomerContent(vm: CashViewModel, onApply: () -> Unit) {
 }
 
 @Composable
-private fun AdminContent(vm: CashViewModel) {
-    Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
+private fun AdminContent(vm: CashViewModel, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { IconButton(onClick = vm::refreshLoans) { Icon(Icons.Default.Refresh, "Refresh") } }
         if (vm.loans.isEmpty()) Text("No loan applications found.", color = Color.Gray, modifier = Modifier.padding(12.dp))
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
